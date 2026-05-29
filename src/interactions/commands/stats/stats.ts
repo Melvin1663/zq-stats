@@ -24,7 +24,11 @@ export default <Command>{
 
 		await int.deferReply();
 
+		const startTime = performance.now();
+
 		const response = await fetch(`https://app.zeqa.net/api/player/stats/name/${encodeURIComponent(username)}`);
+
+		const apiEndTime = performance.now();
 
 		if (response.status === 404) {
 			await int.editReply(`Player \`${username}\` not found.`);
@@ -43,23 +47,27 @@ export default <Command>{
 			return;
 		}
 
-		const stats = data.result;
+		const lifetime = data.result?.lifetime;
+		const season = data.result?.season_stats;
 
 		await int.editReply([
 			`**Zeqa Stats: ${username}**`,
 			"",
 			"**Lifetime**",
-			`Kills: \`${stats?.lifetime.kills}\``,
-			`Deaths: \`${stats?.lifetime.deaths}\``,
-			`K/D: \`${ratio(stats?.lifetime.kills, stats?.lifetime.deaths )}\``,
-			`Coins: \`${stats?.lifetime.coins}\``,
-			`Shards: \`${stats?.lifetime.shards}\``,
-			`BP: \`${stats?.lifetime.bp}\``,
+			`Kills: \`${lifetime?.kills}\``,
+			`Deaths: \`${lifetime?.deaths}\``,
+			`K/D: \`${ratio(lifetime?.kills, lifetime?.deaths )}\``,
+			`Coins: \`${lifetime?.coins}\``,
+			`Shards: \`${lifetime?.shards}\``,
+			`BP: \`${lifetime?.bp}\``,
 			"",
 			"**Season**",
-			`Kills: \`${stats?.season_stats.kills}\``,
-			`Deaths: \`${stats?.season_stats.deaths}\``,
-			`K/D: \`${ratio(stats?.season_stats.kills, stats?.season_stats.deaths)}\``
+			`Kills: \`${season?.kills}\``,
+			`Deaths: \`${season?.deaths}\``,
+			`K/D: \`${ratio(season?.kills, season?.deaths)}\``,
+			"",
+			`Command executed in \`${(performance.now() - startTime).toFixed(2)}ms.\``,
+			`API response time: \`${(apiEndTime - startTime).toFixed(2)}ms.\``,
 		].join("\n"));
 
 	},
