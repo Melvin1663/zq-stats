@@ -6,7 +6,7 @@ import {
 export interface Command {
 	name: string;
 	description: string;
-	category?: "dev" | "fun" | "info" | "mod" | "test" | "util";
+	category?: "stats" | "util";
 	options?: APIApplicationCommandBasicOption[];
 	type?: number;
 	subCommand?: boolean;

@@ -1,6 +1,8 @@
 import { Client } from 'discord.js';
 
 export default async (client: Client) => {
+
+	// @ts-ignore
 	console.log(`Logged in as ${client.user.tag}`);
 
 	if (!process.env.GUILD_ID) {
