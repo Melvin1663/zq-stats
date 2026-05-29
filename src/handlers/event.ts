@@ -1,6 +1,6 @@
 import { Client } from "discord.js"
 import { Dirent, readdirSync } from 'fs';
-import client from '../../index';
+import client from '../../index.js';
 
 export default () => {
 	const load_dir = async (dirs: string) => {

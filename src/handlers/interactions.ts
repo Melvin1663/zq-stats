@@ -1,6 +1,6 @@
 import { ApplicationCommandOption } from "discord.js";
 import { Dirent, readdirSync } from "fs";
-import client from '../../index'
+import client from '../../index.js'
 
 const excludeFields = ['run', 'disabled'];
 
@@ -10,15 +10,15 @@ export default async () => {
 	for (const type of types) {
 		switch (type) {
 			case 'commands': {
-				const search = (path: string) => {
-					readdirSync(path, { withFileTypes: true })
+				const search = async (path: string) => {
+					await Promise.all(readdirSync(path, { withFileTypes: true })
 						.filter((x: Dirent) => x.isDirectory())
 						.map((x: Dirent) => x.name) // get all directories
-						.forEach((dir: string) => search(`${path}${dir}/`));// runs this function in that directory if theres any
+						.map((dir: string) => search(`${path}${dir}/`)));// runs this function in that directory if theres any
 
-					readdirSync(path)
+					await Promise.all(readdirSync(path)
 						.filter((file: string) => file.endsWith('.js')) // get all js files (when compiled)
-						.forEach(async (file: string) => {
+						.map(async (file: string) => {
 							// handles files
 							const { default: cmd } = await import(`${path}${file}`.replace('./build/src/interactions/', '../interactions/')); // ./build/src/interactions/ = ../interactions/
 							if (cmd?.type == 1 || cmd?.type == 2) return;
@@ -67,10 +67,10 @@ export default async () => {
 								cmd.options = cmd.options ?? [];
 								(client.interactions.commands as Record<string, unknown>)[cmd.name as string] = cmd;
 							}
-						})
+						}))
 				}
 
-				search(`./build/src/interactions/${type}/`);
+				await search(`./build/src/interactions/${type}/`);
 			}; break;
 			case 'context': {
 				const kinds = readdirSync(`./build/src/interactions/${type}/`);
