@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "outDir": "./build",
+    "removeComments": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // "baseUrl": ".",
+    "lib": ["esnext", "DOM"],
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules"],
+  "include": ["./src/**/*.ts"]
+}
