@@ -10,7 +10,7 @@ const ratio = (a: number | undefined, b: number | undefined) => {
 export default <Command>{
 	name: "stats",
 	category: "stats",
-	description: "Shows a player's major Zeqa stats",
+	description: "Shows a player's Zeqa stats",
 	options: [
 		{
 			name: "username",
@@ -32,7 +32,7 @@ export default <Command>{
 		}
 
 		if (!response.ok) {
-			await int.editReply(`Zeqa API returned error ${response.status}.`);
+			await int.editReply(`Zeqa API returned error: ${response.status}.`);
 			return;
 		}
 
