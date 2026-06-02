@@ -156,17 +156,17 @@ export default <Command>{
             ctx.imageSmoothingEnabled = true;
 
             drawMinecraftText(`§f${username}`, ctx, 140, 54, "minecraft-ten", 36);
-            drawMinecraftText(`§7Kills: §a${playerStats.lifetime.kills}`, ctx, 140, 104, "mojang-regular", 26);
-            drawMinecraftText(`§7Deaths: §c${playerStats.lifetime.deaths}`, ctx, 140, 138, "mojang-regular", 26);
+            drawMinecraftText(`§7Kills: §a${playerStats.lifetime.kills}`, ctx, 140, 104, "mojang-regular", 32);
+            drawMinecraftText(`§7Deaths: §c${playerStats.lifetime.deaths}`, ctx, 140, 138, "mojang-regular", 32);
             drawMinecraftText(
                 `§7K/D: §e${formatRatio(playerStats.lifetime.kills, playerStats.lifetime.deaths)}`,
                 ctx,
                 140,
                 172,
                 "mojang-regular",
-                26,
+                32,
             );
-            drawMinecraftText(`§7Coins: §6${playerStats.lifetime.coins}`, ctx, 140, 206, "mojang-regular", 26);
+            drawMinecraftText(`§7Coins: §6${playerStats.lifetime.coins}`, ctx, 140, 206, "mojang-regular", 32);
 
             frames.push(await canvas.toBuffer("raw", { colorType: "rgba" }));
         }
