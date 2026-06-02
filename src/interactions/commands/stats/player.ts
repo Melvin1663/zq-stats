@@ -1,6 +1,7 @@
 import { ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../../../types/types";
-import { Canvas } from "skia-canvas";
+import { ApiResponse, PlayerStats } from "../../../types/zeqaTypes";
+import { Canvas, loadImage } from "skia-canvas";
 import client from '../../../../index';
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
@@ -18,6 +19,26 @@ const useGpu = true;
 
 const formatSize = (bytes: number) => `${Math.round(bytes / 1024)} KB`;
 const formatTime = (milliseconds: number) => `${(milliseconds / 1000).toFixed(2)}s`;
+
+const fetchPlayerStats = async (username: string) => {
+    const response = await fetch(`https://app.zeqa.net/api/player/stats/name/${encodeURIComponent(username)}`);
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Zeqa API returned error: ${response.status}.`);
+    }
+
+    const data = await response.json() as ApiResponse<PlayerStats>;
+
+    if (data.err !== null) {
+        throw new Error(`Zeqa API error: ${data.err}.`);
+    }
+
+    return data.result;
+};
 
 const encodeAvif = (frames: Buffer[]) => {
     const crf = Math.round((100 - avifQuality) * 63 / 100);
@@ -110,12 +131,27 @@ export default <Command>{
         const canvas = new Canvas(width, height);
         const ctx = canvas.getContext('2d');
 
+        const username = int.options.getString("username", true);
         const theme = int.options.getString("theme", true);
+
+        const zeqaStart = performance.now();
+        const playerStats = await fetchPlayerStats(username);
+        const zeqaElapsed = performance.now() - zeqaStart;
+
+        if (!playerStats) {
+            await int.editReply(`Player \`${username}\` not found.`);
+            return;
+        }
+
+        const head = await loadImage(`https://inpvp.net/api/skin/${encodeURIComponent(username)}`);
         const frames: Buffer[] = [];
 
         const canvasStart = performance.now();
         for (let i = 1; i <= sourceFrameCount; i++) {
             ctx.drawImage(client.canvas.imgs[`${theme}_${i}`], 0, 0);
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(head, 20, 20, 100, 100);
+            ctx.imageSmoothingEnabled = true;
             frames.push(await canvas.toBuffer("raw", { colorType: "rgba" }));
         }
         const canvasElapsed = performance.now() - canvasStart;
@@ -126,7 +162,7 @@ export default <Command>{
         console.log(`AVIF Size: ${(attachment.length / 1024) / 1024}mb`);
 
         await int.editReply({
-            content: `Size: \`${formatSize(attachment.length)}\`\nCanvas: \`${formatTime(canvasElapsed)}\`\nEncoding: \`${formatTime(encodeElapsed)}\``,
+            content: `Size: \`${formatSize(attachment.length)}\`\nZeqa API: \`${formatTime(zeqaElapsed)}\`\nCanvas: \`${formatTime(canvasElapsed)}\`\nEncoding: \`${formatTime(encodeElapsed)}\``,
             files: [{
                 attachment,
                 name: `player.avif`
