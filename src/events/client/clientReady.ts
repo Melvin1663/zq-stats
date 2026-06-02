@@ -1,4 +1,5 @@
 import { Client } from 'discord.js';
+import init_canvas from '../../functions/canvas/init';
 
 export default async (client: Client) => {
 
@@ -23,4 +24,6 @@ export default async (client: Client) => {
 
 	await client.application!.commands.set([]);
 	// console.log(`Registered ${commands.length} global command(s).`);
+
+    await init_canvas();
 }

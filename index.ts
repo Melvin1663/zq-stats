@@ -13,6 +13,10 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+client.canvas = {
+    imgs: {},
+    fonts: {}
+}
 client.interactionsCache = {};
 client.interactions = {
     commands: {},

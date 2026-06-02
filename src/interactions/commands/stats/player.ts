@@ -1,58 +1,114 @@
 import { ApplicationCommandOptionType, ChatInputCommandInteraction } from "discord.js";
 import { Command } from "../../../types/types";
-import { ApiResponse, PlayerStats } from "../../../types/zeqaTypes";
-import { createCanvas } from "canvas";
-import GIFEncoder from 'gifencoder';
+import { Canvas } from "skia-canvas";
+import client from '../../../../index';
+import { spawn } from "child_process";
+import { promises as fs } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { randomUUID } from "crypto";
 
-const ratio = (a: number | undefined, b: number | undefined) => {
-	if (b === 0 || b === undefined) return (a ?? 0).toFixed(2);
-	return ((a ?? 0) / (b ?? 1)).toFixed(2);
+const width = 1280;
+const height = 720;
+const sourceFrameCount = 60;
+const frameRate = 60;
+const avifQuality = 70;
+
+const encodeAvif = (frames: Buffer[]) => {
+    const crf = Math.round((100 - avifQuality) * 63 / 100);
+    const outputPath = join(tmpdir(), `player-${randomUUID()}.avif`);
+
+    return new Promise<Buffer>((resolve, reject) => {
+        const ffmpeg = spawn("ffmpeg", [
+            "-hide_banner",
+            "-loglevel", "error",
+            "-framerate", frameRate.toString(),
+            "-f", "image2pipe",
+            "-vcodec", "png",
+            "-i", "pipe:0",
+            "-c:v", "libaom-av1",
+            "-crf", crf.toString(),
+            "-b:v", "0",
+            "-cpu-used", "4",
+            "-pix_fmt", "yuv420p",
+            "-still-picture", "0",
+            "-f", "avif",
+            outputPath
+        ]);
+
+        const errors: Buffer[] = [];
+
+        ffmpeg.stderr.on("data", chunk => errors.push(chunk));
+        ffmpeg.on("error", reject);
+        ffmpeg.on("close", async code => {
+            if (code === 0) {
+                try {
+                    const attachment = await fs.readFile(outputPath);
+                    await fs.unlink(outputPath);
+                    resolve(attachment);
+                } catch (error) {
+                    reject(error);
+                }
+
+                return;
+            }
+
+            await fs.unlink(outputPath).catch(() => undefined);
+            reject(new Error(Buffer.concat(errors).toString() || `ffmpeg exited with code ${code}`));
+        });
+
+        ffmpeg.stdin.end(Buffer.concat(frames));
+    });
 };
 
 export default <Command>{
-	name: "player",
-	category: "stats",
-	description: "Shows a player's Zeqa stats",
-	options: [
-		{
-			name: "username",
-			description: "The player's username",
-			type: ApplicationCommandOptionType.String,
-			required: true,
-		},
-	],
-	run: async (int: ChatInputCommandInteraction) => {
-		await int.deferReply();
+    name: "player",
+    category: "stats",
+    description: "Shows a player's Zeqa stats",
+    options: [
+        {
+            name: "username",
+            description: "The player's username",
+            type: ApplicationCommandOptionType.String,
+            required: true,
+        },
+        {
+            name: "theme",
+            description: "BG for the image",
+            type: ApplicationCommandOptionType.String,
+            choices: [
+                { name: 'Sunrise', value: 'sunrise' },
+                { name: 'Noon', value: 'noon' },
+                { name: 'Sunset', value: 'sunset' },
+                { name: 'Night', value: 'night' },
+                { name: 'Midnight', value: 'midnight' }
+            ],
+            required: true
+        }
+    ],
+    run: async (int: ChatInputCommandInteraction) => {
+        await int.deferReply();
 
-		const width = 200;
-		const height = 200;
+        const canvas = new Canvas(width, height);
+        const ctx = canvas.getContext('2d');
 
-		const encoder = new GIFEncoder(width, height);
+        const theme = int.options.getString("theme", true);
+        const frames: Buffer[] = [];
 
-		encoder.start();
-		encoder.setRepeat(0); // loooooooooop
-		encoder.setDelay(500); // ms per frame
-		encoder.setQuality(10);
+        for (let i = 1; i <= sourceFrameCount; i++) {
+            ctx.drawImage(client.canvas.imgs[`${theme}_${i}`], 0, 0);
+            const frame = await canvas.toBuffer("png");
+            frames.push(frame, frame);
+        }
 
-		const canvas = createCanvas(width, height);
-		const ctx = canvas.getContext('2d');
+        const attachment = await encodeAvif(frames);
+        console.log(`AVIF Size: ${(attachment.length / 1024) / 1024}mb`);
 
-		const colors = ['#FF0000', '#00FF00', '#0000FF'];
-		colors.forEach((color) => {
-			ctx.fillStyle = color;
-			ctx.fillRect(0, 0, width, height);
-
-			encoder.addFrame(ctx as any);
-		});
-
-		encoder.finish();
-
-
-		await int.editReply({
-			files: [{
-				attachment: encoder.out.getData(),
-				name: `player.gif`
-			}]
-		})
-	},
+        await int.editReply({
+            files: [{
+                attachment,
+                name: `player.avif`
+            }]
+        })
+    },
 };
