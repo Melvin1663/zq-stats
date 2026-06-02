@@ -3,6 +3,7 @@ import { Command } from "../../../types/types";
 import { ApiResponse, PlayerStats } from "../../../types/zeqaTypes";
 import { Canvas, loadImage } from "skia-canvas";
 import client from '../../../../index';
+import drawMinecraftText from "../../../functions/canvas/mcmd";
 import { spawn } from "child_process";
 import { promises as fs } from "fs";
 import { tmpdir } from "os";
@@ -19,6 +20,7 @@ const useGpu = true;
 
 const formatSize = (bytes: number) => `${Math.round(bytes / 1024)} KB`;
 const formatTime = (milliseconds: number) => `${(milliseconds / 1000).toFixed(2)}s`;
+const formatRatio = (a: number, b: number) => b === 0 ? a.toFixed(2) : (a / b).toFixed(2);
 
 const fetchPlayerStats = async (username: string) => {
     const response = await fetch(`https://app.zeqa.net/api/player/stats/name/${encodeURIComponent(username)}`);
@@ -152,6 +154,20 @@ export default <Command>{
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(head, 20, 20, 100, 100);
             ctx.imageSmoothingEnabled = true;
+
+            drawMinecraftText(`§f${username}`, ctx, 140, 54, "minecraft-ten", 36);
+            drawMinecraftText(`§7Kills: §a${playerStats.lifetime.kills}`, ctx, 140, 104, "minecraft-seven", 26);
+            drawMinecraftText(`§7Deaths: §c${playerStats.lifetime.deaths}`, ctx, 140, 138, "minecraft-seven", 26);
+            drawMinecraftText(
+                `§7K/D: §e${formatRatio(playerStats.lifetime.kills, playerStats.lifetime.deaths)}`,
+                ctx,
+                140,
+                172,
+                "minecraft-seven",
+                26,
+            );
+            drawMinecraftText(`§7Coins: §6${playerStats.lifetime.coins}`, ctx, 140, 206, "minecraft-seven", 26);
+
             frames.push(await canvas.toBuffer("raw", { colorType: "rgba" }));
         }
         const canvasElapsed = performance.now() - canvasStart;

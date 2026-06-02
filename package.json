@@ -2,7 +2,7 @@
 	"scripts": {
 		"build": "powershell -NoProfile -Command \"if (Test-Path build) { Remove-Item build -Recurse -Force }; tsc\"",
 		"start": "node build/index.js",
-		"dev": "npm run build && node build/index.js"
+		"dev": "npm run build && npm run start"
 	},
 	"dependencies": {
 		"canvas": "^3.2.3",
