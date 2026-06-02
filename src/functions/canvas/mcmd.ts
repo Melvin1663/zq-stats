@@ -157,6 +157,8 @@ const applyTextStyle = (
     ctx.font = `${fontSize}px ${getFontName(font, state)}`;
 };
 
+const getShadowOffset = (fontSize: number) => fontSize / 8;
+
 const drawLine = (
     ctx: CanvasRenderingContext2D,
     state: McmdState,
@@ -243,8 +245,9 @@ export default function drawMinecraftText(
         const restText = section.slice(1);
         applyTextStyle(ctx, font, fontSize, state);
 
+        const shadowOffset = getShadowOffset(fontSize);
         ctx.fillStyle = shadowColorHex[state.color];
-        ctx.fillText(restText, x + 2, pos_y + 2);
+        ctx.fillText(restText, x + shadowOffset, pos_y + shadowOffset);
         ctx.fillStyle = colorHex[state.color];
         ctx.fillText(restText, x, pos_y);
 
