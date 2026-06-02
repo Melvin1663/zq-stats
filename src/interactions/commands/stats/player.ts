@@ -11,25 +11,43 @@ import { randomUUID } from "crypto";
 const width = 1280;
 const height = 720;
 const sourceFrameCount = 60;
+const sourceFrameRate = 30;
 const frameRate = 60;
 const avifQuality = 70;
+const useGpu = true;
+
+const formatSize = (bytes: number) => `${Math.round(bytes / 1024)} KB`;
+const formatTime = (milliseconds: number) => `${(milliseconds / 1000).toFixed(2)}s`;
 
 const encodeAvif = (frames: Buffer[]) => {
     const crf = Math.round((100 - avifQuality) * 63 / 100);
+    const cq = Math.round((100 - avifQuality) * 51 / 100);
     const outputPath = join(tmpdir(), `player-${randomUUID()}.avif`);
+    const encoderArgs = useGpu
+        ? [
+            "-c:v", "av1_nvenc",
+            "-preset", "p5",
+            "-cq", cq.toString(),
+            "-b:v", "0",
+        ]
+        : [
+            "-c:v", "libaom-av1",
+            "-crf", crf.toString(),
+            "-b:v", "0",
+            "-cpu-used", "4",
+        ];
 
     return new Promise<Buffer>((resolve, reject) => {
         const ffmpeg = spawn("ffmpeg", [
             "-hide_banner",
             "-loglevel", "error",
-            "-framerate", frameRate.toString(),
-            "-f", "image2pipe",
-            "-vcodec", "png",
+            "-framerate", sourceFrameRate.toString(),
+            "-f", "rawvideo",
+            "-pix_fmt", "rgba",
+            "-s:v", `${width}x${height}`,
             "-i", "pipe:0",
-            "-c:v", "libaom-av1",
-            "-crf", crf.toString(),
-            "-b:v", "0",
-            "-cpu-used", "4",
+            "-vf", `fps=${frameRate}`,
+            ...encoderArgs,
             "-pix_fmt", "yuv420p",
             "-still-picture", "0",
             "-f", "avif",
@@ -95,16 +113,20 @@ export default <Command>{
         const theme = int.options.getString("theme", true);
         const frames: Buffer[] = [];
 
+        const canvasStart = performance.now();
         for (let i = 1; i <= sourceFrameCount; i++) {
             ctx.drawImage(client.canvas.imgs[`${theme}_${i}`], 0, 0);
-            const frame = await canvas.toBuffer("png");
-            frames.push(frame, frame);
+            frames.push(await canvas.toBuffer("raw", { colorType: "rgba" }));
         }
+        const canvasElapsed = performance.now() - canvasStart;
 
+        const encodeStart = performance.now();
         const attachment = await encodeAvif(frames);
+        const encodeElapsed = performance.now() - encodeStart;
         console.log(`AVIF Size: ${(attachment.length / 1024) / 1024}mb`);
 
         await int.editReply({
+            content: `Size: \`${formatSize(attachment.length)}\`\nCanvas: \`${formatTime(canvasElapsed)}\`\nEncoding: \`${formatTime(encodeElapsed)}\``,
             files: [{
                 attachment,
                 name: `player.avif`
